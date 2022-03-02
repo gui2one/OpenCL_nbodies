@@ -4,10 +4,15 @@ project(OpenCL_test)
 
 link_directories(
     "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.0/lib/x64/"
+    vendor/
+    # build/Release
+    C:/msys64/mingw64/lib
 )
 include_directories(
     "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.0/include"
     vendor/glad/include
+    vendor/imgui/
+    C:/msys64/mingw64/include
 )
 add_executable(app
     src/main.cpp
@@ -19,7 +24,27 @@ add_subdirectory(vendor/glad)
 include_directories(vendor/glad/include)
 target_link_libraries(app glad ${GLAD_LIBRARIES})
 
+#ImGUI
+add_library(imgui STATIC
+    vendor/imgui/backends/imgui_impl_opengl3.cpp
+    vendor/imgui/backends/imgui_impl_glfw.cpp
+    vendor/imgui/imgui.cpp
+    vendor/imgui/imgui_demo.cpp
+    vendor/imgui/imgui_draw.cpp
+    vendor/imgui/imgui_widgets.cpp
+    vendor/imgui/imgui_tables.cpp    
+)
+
+target_link_libraries(imgui
+    -lglfw3
+)
 target_link_libraries(app
     -lOpenCL
     -lglfw3
+    # -l:libglad.a
+    # -l:libimgui.a
+
 )
+
+target_include_directories(app PRIVATE vendor/imgui)
+target_link_libraries(app imgui ${IMGUI_LIBRARIES})

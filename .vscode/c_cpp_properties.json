@@ -4,7 +4,8 @@
             "name": "Win32",
             "includePath": [
                 "${workspaceFolder}/**",
-                "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.0/include"
+                "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.0/include",
+                "C:/msys64/mingw64/include"
             ],
             "defines": [
                 "_DEBUG",

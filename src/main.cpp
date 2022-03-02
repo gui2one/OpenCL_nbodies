@@ -4,6 +4,11 @@
 
 #include "glad/glad.h"
 #include "GLFW/glfw3.h"
+// #define IMGUI_IMPL_OPENGL_LOADER_GLAD
+#include "imgui.h"
+#include "backends/imgui_impl_glfw.h"
+#include "backends/imgui_impl_opengl3.h"
+
 #define __CL_ENABLE_EXCEPTIONS
 #include <CL/cl.hpp>
 
@@ -16,7 +21,34 @@ typedef struct SimPoint_struct
     float radius = 1.0f;
     bool collided = false;
 } SimPoint;
+void BeginFrame()
+{
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
 
+    ImGui::DockSpaceOverViewport(NULL, ImGuiDockNodeFlags_None | ImGuiDockNodeFlags_PassthruCentralNode /*|ImGuiDockNodeFlags_NoResize*/);
+}
+
+void EndFrame()
+{
+
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    ImGui::EndFrame();
+
+    ImGuiIO &io = ImGui::GetIO();
+
+    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+    {
+        GLFWwindow *backup_current_context = glfwGetCurrentContext();
+
+        ImGui::UpdatePlatformWindows();
+        ImGui::RenderPlatformWindowsDefault();
+
+        glfwMakeContextCurrent(backup_current_context);
+    }
+}
 int main()
 {
 
@@ -44,38 +76,6 @@ int main()
         return -1;
     }
     cl::Device &device = devices[0];
-    // int platform_id = 0;
-    // int device_id = 0;
-
-    // std::cout << "Number of Platforms: " << platforms.size() << std::endl;
-    // for (std::vector<cl::Platform>::iterator it = platforms.begin(); it != platforms.end(); ++it)
-    // {
-    //     cl::Platform platform(*it);
-
-    //     std::cout << "Platform ID: " << platform_id++ << std::endl;
-    //     std::cout << "Platform Name: " << platform.getInfo<CL_PLATFORM_NAME>() << std::endl;
-    //     std::cout << "Platform Vendor: " << platform.getInfo<CL_PLATFORM_VENDOR>() << std::endl;
-
-    //     platform.getDevices(CL_DEVICE_TYPE_GPU, &devices);
-
-    //     for (std::vector<cl::Device>::iterator it2 = devices.begin(); it2 != devices.end(); ++it2)
-    //     {
-    //         cl::Device device(*it2);
-
-    //         std::cout << "\tDevice " << device_id++ << ": " << std::endl;
-    //         std::cout << "\t\tDevice Name: " << device.getInfo<CL_DEVICE_NAME>() << std::endl;
-    //         std::cout << "\t\tDevice Type: " << device.getInfo<CL_DEVICE_TYPE>();
-    //         std::cout << " (GPU: " << CL_DEVICE_TYPE_GPU << ", CPU: " << CL_DEVICE_TYPE_CPU << ")" << std::endl;
-    //         std::cout << "\t\tDevice Vendor: " << device.getInfo<CL_DEVICE_VENDOR>() << std::endl;
-    //         std::cout << "\t\tDevice Max Compute Units: " << device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>() << std::endl;
-    //         std::cout << "\t\tDevice Global Memory: " << device.getInfo<CL_DEVICE_GLOBAL_MEM_SIZE>() << std::endl;
-    //         std::cout << "\t\tDevice Max Clock Frequency: " << device.getInfo<CL_DEVICE_MAX_CLOCK_FREQUENCY>() << std::endl;
-    //         std::cout << "\t\tDevice Max Allocateable Memory: " << device.getInfo<CL_DEVICE_MAX_MEM_ALLOC_SIZE>() << std::endl;
-    //         std::cout << "\t\tDevice Local Memory: " << device.getInfo<CL_DEVICE_LOCAL_MEM_SIZE>() << std::endl;
-    //         std::cout << "\t\tDevice Available: " << device.getInfo<CL_DEVICE_AVAILABLE>() << std::endl;
-    //     }
-    //     std::cout << std::endl;
-    // }
 
     cl::Context context;
     context = cl::Context(device);
@@ -126,6 +126,18 @@ int main()
     glfwInit();
     GLFWwindow *win = glfwCreateWindow(500, 500, "OpenCL Baby !!!", NULL, NULL);
 
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO &io = ImGui::GetIO();
+
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    // io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+    // io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+    io.ConfigWindowsMoveFromTitleBarOnly = true;
+
+    ImGui_ImplGlfw_InitForOpenGL(win, true);
+    const char *glsl_version = "#version 330";
+    ImGui_ImplOpenGL3_Init(glsl_version);
     glfwMakeContextCurrent(win);
     gladLoadGL();
 
@@ -137,6 +149,9 @@ int main()
         glViewport(0, 0, width, height);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glClearColor(0.5f, 0.0f, 0.0f, 1.0f);
+
+        ImGui::Begin("hello");
+        ImGui::End();
         glfwSwapBuffers(win);
         glfwPollEvents();
     }
