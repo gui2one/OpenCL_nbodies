@@ -37,6 +37,7 @@ add_library(imgui STATIC
 
 target_link_libraries(imgui
     -lglfw3
+    imm32.lib
 )
 target_link_libraries(app
     -lOpenCL
