@@ -131,16 +131,16 @@ int main()
     ImGuiIO &io = ImGui::GetIO();
 
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-    // io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     // io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
     io.ConfigWindowsMoveFromTitleBarOnly = true;
+
+    glfwMakeContextCurrent(win);
+    gladLoadGL();
 
     ImGui_ImplGlfw_InitForOpenGL(win, true);
     const char *glsl_version = "#version 330";
     ImGui_ImplOpenGL3_Init(glsl_version);
-    glfwMakeContextCurrent(win);
-    gladLoadGL();
-
     while (!glfwWindowShouldClose(win))
     {
 
@@ -150,8 +150,11 @@ int main()
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glClearColor(0.5f, 0.0f, 0.0f, 1.0f);
 
+        BeginFrame();
         ImGui::Begin("hello");
         ImGui::End();
+
+        EndFrame();
         glfwSwapBuffers(win);
         glfwPollEvents();
     }
