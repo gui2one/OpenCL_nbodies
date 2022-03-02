@@ -7,7 +7,7 @@
 #define __CL_ENABLE_EXCEPTIONS
 #include <CL/cl.hpp>
 
-const char *sim_kernel_path = "C:/gui2one/CODE/OpenCL_test/cl_kernels/simulation.ocl";
+const char *sim_kernel_path = "C:/gui2one/CODE/OpenCL_nbodies/cl_kernels/simulation.ocl";
 
 typedef struct SimPoint_struct
 {
@@ -35,46 +35,53 @@ int main()
     std::vector<cl::Platform>
         platforms;
     cl::Platform::get(&platforms);
-
-    int platform_id = 0;
-    int device_id = 0;
     std::vector<cl::Device> devices;
+    platforms[0].getDevices(CL_DEVICE_TYPE_GPU, &devices);
 
-    std::cout << "Number of Platforms: " << platforms.size() << std::endl;
-    for (std::vector<cl::Platform>::iterator it = platforms.begin(); it != platforms.end(); ++it)
+    if (devices.size() == 0)
     {
-        cl::Platform platform(*it);
-
-        std::cout << "Platform ID: " << platform_id++ << std::endl;
-        std::cout << "Platform Name: " << platform.getInfo<CL_PLATFORM_NAME>() << std::endl;
-        std::cout << "Platform Vendor: " << platform.getInfo<CL_PLATFORM_VENDOR>() << std::endl;
-
-        platform.getDevices(CL_DEVICE_TYPE_GPU, &devices);
-
-        for (std::vector<cl::Device>::iterator it2 = devices.begin(); it2 != devices.end(); ++it2)
-        {
-            cl::Device device(*it2);
-
-            std::cout << "\tDevice " << device_id++ << ": " << std::endl;
-            std::cout << "\t\tDevice Name: " << device.getInfo<CL_DEVICE_NAME>() << std::endl;
-            std::cout << "\t\tDevice Type: " << device.getInfo<CL_DEVICE_TYPE>();
-            std::cout << " (GPU: " << CL_DEVICE_TYPE_GPU << ", CPU: " << CL_DEVICE_TYPE_CPU << ")" << std::endl;
-            std::cout << "\t\tDevice Vendor: " << device.getInfo<CL_DEVICE_VENDOR>() << std::endl;
-            std::cout << "\t\tDevice Max Compute Units: " << device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>() << std::endl;
-            std::cout << "\t\tDevice Global Memory: " << device.getInfo<CL_DEVICE_GLOBAL_MEM_SIZE>() << std::endl;
-            std::cout << "\t\tDevice Max Clock Frequency: " << device.getInfo<CL_DEVICE_MAX_CLOCK_FREQUENCY>() << std::endl;
-            std::cout << "\t\tDevice Max Allocateable Memory: " << device.getInfo<CL_DEVICE_MAX_MEM_ALLOC_SIZE>() << std::endl;
-            std::cout << "\t\tDevice Local Memory: " << device.getInfo<CL_DEVICE_LOCAL_MEM_SIZE>() << std::endl;
-            std::cout << "\t\tDevice Available: " << device.getInfo<CL_DEVICE_AVAILABLE>() << std::endl;
-        }
-        std::cout << std::endl;
+        std::cout << "No OpenCL device available" << std::endl;
+        return -1;
     }
+    cl::Device &device = devices[0];
+    // int platform_id = 0;
+    // int device_id = 0;
+
+    // std::cout << "Number of Platforms: " << platforms.size() << std::endl;
+    // for (std::vector<cl::Platform>::iterator it = platforms.begin(); it != platforms.end(); ++it)
+    // {
+    //     cl::Platform platform(*it);
+
+    //     std::cout << "Platform ID: " << platform_id++ << std::endl;
+    //     std::cout << "Platform Name: " << platform.getInfo<CL_PLATFORM_NAME>() << std::endl;
+    //     std::cout << "Platform Vendor: " << platform.getInfo<CL_PLATFORM_VENDOR>() << std::endl;
+
+    //     platform.getDevices(CL_DEVICE_TYPE_GPU, &devices);
+
+    //     for (std::vector<cl::Device>::iterator it2 = devices.begin(); it2 != devices.end(); ++it2)
+    //     {
+    //         cl::Device device(*it2);
+
+    //         std::cout << "\tDevice " << device_id++ << ": " << std::endl;
+    //         std::cout << "\t\tDevice Name: " << device.getInfo<CL_DEVICE_NAME>() << std::endl;
+    //         std::cout << "\t\tDevice Type: " << device.getInfo<CL_DEVICE_TYPE>();
+    //         std::cout << " (GPU: " << CL_DEVICE_TYPE_GPU << ", CPU: " << CL_DEVICE_TYPE_CPU << ")" << std::endl;
+    //         std::cout << "\t\tDevice Vendor: " << device.getInfo<CL_DEVICE_VENDOR>() << std::endl;
+    //         std::cout << "\t\tDevice Max Compute Units: " << device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>() << std::endl;
+    //         std::cout << "\t\tDevice Global Memory: " << device.getInfo<CL_DEVICE_GLOBAL_MEM_SIZE>() << std::endl;
+    //         std::cout << "\t\tDevice Max Clock Frequency: " << device.getInfo<CL_DEVICE_MAX_CLOCK_FREQUENCY>() << std::endl;
+    //         std::cout << "\t\tDevice Max Allocateable Memory: " << device.getInfo<CL_DEVICE_MAX_MEM_ALLOC_SIZE>() << std::endl;
+    //         std::cout << "\t\tDevice Local Memory: " << device.getInfo<CL_DEVICE_LOCAL_MEM_SIZE>() << std::endl;
+    //         std::cout << "\t\tDevice Available: " << device.getInfo<CL_DEVICE_AVAILABLE>() << std::endl;
+    //     }
+    //     std::cout << std::endl;
+    // }
 
     cl::Context context;
-    context = cl::Context(devices[0]);
+    context = cl::Context(device);
 
     // Create command queue.
-    cl::CommandQueue queue(context, devices[0]);
+    cl::CommandQueue queue(context, device);
 
     // Compile OpenCL program for found device.
     cl::Program sim_program(context, cl::Program::Sources(1, std::make_pair(sim_kernel_source.c_str(), strlen(sim_kernel_source.c_str()))));

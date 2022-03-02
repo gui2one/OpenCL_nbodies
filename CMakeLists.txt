@@ -10,7 +10,7 @@ include_directories(
     vendor/glad/include
 )
 add_executable(app
-    main.cpp
+    src/main.cpp
 )
 
 # GLAD
