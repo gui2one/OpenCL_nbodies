@@ -21,6 +21,7 @@ typedef struct SimPoint_struct
     float radius = 1.0f;
     bool collided = false;
 } SimPoint;
+
 void BeginFrame()
 {
     ImGui_ImplOpenGL3_NewFrame();
@@ -49,33 +50,105 @@ void EndFrame()
         glfwMakeContextCurrent(backup_current_context);
     }
 }
-int main()
+
+std::vector<cl::Platform> ListPlatforms()
+{
+    std::vector<cl::Platform> platforms;
+    cl::Platform::get(&platforms);
+
+    return platforms;
+}
+
+std::vector<std::vector<cl::Device>> ListDevices()
 {
 
-    std::ifstream sim_source_file(sim_kernel_path);
-    std::string sim_kernel_source;
+    std::vector<cl::Platform> platforms = ListPlatforms();
+    std::cout << "Num Platforms :" << platforms.size() << std::endl;
+    std::vector<std::vector<cl::Device>> devices_list;
+    for (auto it = platforms.begin(); it != platforms.end(); ++it)
+    {
+        std::vector<cl::Device> devices;
+        // devices.clear();
+        auto cur_platform = *it;
+
+        cur_platform.getDevices(CL_DEVICE_TYPE_GPU, &devices);
+
+        devices_list.push_back(devices);
+    }
+
+    return devices_list;
+}
+
+void PrintDevicesList(std::vector<std::vector<cl::Device>> list)
+{
+    for (auto it = list.begin(); it != list.end(); ++it)
+    {
+
+        auto cur_list = *it;
+
+        for (auto it2 = cur_list.begin(); it2 != cur_list.end(); ++it2)
+        {
+
+            auto cur_device = *it2;
+            std::cout << "Device Properties" << std::endl;
+            std::cout << "\tName : " << cur_device.getInfo<CL_DEVICE_NAME>() << std::endl;
+        }
+    }
+
+    std::cout << "--------------------------------" << std::endl;
+}
+
+void LoadKernelSource(const char *path, std::string &src)
+{
+    //// load kernel source
+    std::ifstream sim_source_file(path);
+
     std::string line;
     while (std::getline(sim_source_file, line))
     {
-        sim_kernel_source += line + "\n";
+        src += line + "\n";
     }
+}
 
-    std::cout << "SIM KERNEL SOURCE" << std::endl;
-    std::cout << sim_kernel_source << std::endl;
+void PrintKernalSource(std::string source_string)
+{
 
-    // return 0;
-    std::vector<cl::Platform>
-        platforms;
-    cl::Platform::get(&platforms);
-    std::vector<cl::Device> devices;
-    platforms[0].getDevices(CL_DEVICE_TYPE_GPU, &devices);
+    std::cout << "KERNEL SOURCE" << std::endl;
+    std::cout << source_string << std::endl;
+}
 
-    if (devices.size() == 0)
+cl::Program BuildProgram(cl::Context context, std::string prog_source, std::vector<std::vector<cl::Device>> devices_list)
+{
+    // Compile OpenCL program for found device.
+    cl::Program program(context, cl::Program::Sources(1, std::make_pair(prog_source.c_str(), strlen(prog_source.c_str()))));
+
+    try
     {
-        std::cout << "No OpenCL device available" << std::endl;
-        return -1;
+        program.build(devices_list[0]);
     }
-    cl::Device &device = devices[0];
+    catch (const cl::Error &)
+    {
+        std::cerr
+            << "OpenCL compilation error" << std::endl
+            << program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices_list[0][0])
+            << std::endl;
+    }
+
+    return program;
+}
+
+int main()
+{
+
+    std::vector<std::vector<cl::Device>> devices_list = ListDevices();
+    PrintDevicesList(devices_list);
+
+    std::string sim_kernel_source;
+    LoadKernelSource("C:/gui2one/CODE/OpenCL_nbodies/cl_kernels/simulation.ocl", sim_kernel_source);
+    PrintKernalSource(sim_kernel_source);
+
+    // choose a device
+    cl::Device &device = devices_list[0][0];
 
     cl::Context context;
     context = cl::Context(device);
@@ -83,21 +156,7 @@ int main()
     // Create command queue.
     cl::CommandQueue queue(context, device);
 
-    // Compile OpenCL program for found device.
-    cl::Program sim_program(context, cl::Program::Sources(1, std::make_pair(sim_kernel_source.c_str(), strlen(sim_kernel_source.c_str()))));
-
-    try
-    {
-        sim_program.build(devices);
-    }
-    catch (const cl::Error &)
-    {
-        std::cerr
-            << "OpenCL compilation error" << std::endl
-            << sim_program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[0])
-            << std::endl;
-        return 1;
-    }
+    cl::Program sim_program = BuildProgram(context, sim_kernel_source, devices_list);
 
     cl::Kernel simulation(sim_program, "simulation");
     // Prepare input data.

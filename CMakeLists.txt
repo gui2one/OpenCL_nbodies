@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.2)
 
 project(OpenCL_test)
 
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-ignored-attributes")
 link_directories(
     "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.0/lib/x64/"
     vendor/
@@ -37,13 +39,12 @@ add_library(imgui STATIC
 
 target_link_libraries(imgui
     -lglfw3
+     # link with imm32.lib because I am on windows and not using visual studio !!
     imm32.lib
 )
 target_link_libraries(app
     -lOpenCL
     -lglfw3
-    # -l:libglad.a
-    # -l:libimgui.a
 
 )
 

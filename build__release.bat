@@ -1,5 +1,5 @@
 @echo off
-CALL ./generate__release.bat
+CALL .\generate__release.bat
 
 cd build/Release
 rm -f app.exe
