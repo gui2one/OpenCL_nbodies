@@ -11,13 +11,17 @@ link_directories(
     C:/msys64/mingw64/lib
 )
 include_directories(
+    src/
     "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.0/include"
     vendor/glad/include
+    vendor/glm/
     vendor/imgui/
     C:/msys64/mingw64/include
 )
 add_executable(app
+    
     src/main.cpp
+    src/RNDGenerator.cpp
 )
 
 # GLAD

@@ -12,16 +12,10 @@
 #define __CL_ENABLE_EXCEPTIONS
 #include <CL/cl.hpp>
 
+#include <glm/glm.hpp>
+#include "RNDGenerator.h"
+#include "SimPoint.h"
 const char *sim_kernel_path = "C:/gui2one/CODE/OpenCL_nbodies/cl_kernels/simulation.ocl";
-
-// this strct must be repeated exacly inside kernel source code.
-typedef struct SimPoint_struct
-{
-    float position[3];
-    float mass = 1.f;
-    float radius = 1.0f;
-    bool collided = false;
-} SimPoint;
 
 void BeginImGuiFrame()
 {
@@ -138,6 +132,30 @@ cl::Program BuildProgram(cl::Context context, std::string prog_source, std::vect
     return program;
 }
 
+std::vector<SimPoint> InitSimPoints(uint32_t num_pts)
+{
+    std::vector<SimPoint> pts;
+    for (size_t i = 0; i < num_pts; i++)
+    {
+        auto rng = RNDGenerator::GetInstance();
+        SimPoint pt;
+        pt.position[0] = rng->Float(-1.f, 1.f);
+        pt.position[1] = rng->Float(-1.f, 1.f);
+        pt.position[2] = rng->Float(-1.f, 1.f);
+
+        pt.velocity[0] = rng->Float(-1.f, 1.f) * 0.01f;
+        pt.velocity[1] = 0.0f;
+        pt.velocity[2] = 0.0f;
+
+        pt.mass = 1.0f;
+        pt.radius = 1.0f;
+
+        pts.push_back(pt);
+    }
+
+    return pts;
+}
+
 int main()
 {
 
@@ -161,32 +179,10 @@ int main()
 
     cl::Kernel simulation(sim_program, "simulation");
     // Prepare input data.
-    size_t NUM_POINTS = 2;
-    std::vector<SimPoint> sim_points(NUM_POINTS, {0.0f, 0.0f, 0.0f, 1.0f, 1.0f, false});
+    size_t NUM_POINTS = 100000;
+    // std::vector<SimPoint> sim_points(NUM_POINTS, {0.0f, 0.0f, 0.0f, 1.0f, 1.0f, false});
+    std::vector<SimPoint> sim_points = InitSimPoints(NUM_POINTS);
     std::vector<SimPoint> sim_points_output(NUM_POINTS);
-
-    cl::Buffer SIM_POINTS(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-                          sim_points.size() * sizeof(SimPoint), sim_points.data());
-    cl::Buffer SIM_POINTS_OUTPUT(context, CL_MEM_READ_WRITE,
-                                 sim_points_output.size() * sizeof(SimPoint));
-    simulation.setArg(0, static_cast<cl_ulong>(NUM_POINTS));
-    simulation.setArg(1, SIM_POINTS);
-    simulation.setArg(2, SIM_POINTS_OUTPUT);
-
-    // Launch kernel on the compute device.
-    int offset = 0;
-    queue.enqueueNDRangeKernel(simulation, offset, NUM_POINTS);
-
-    // Get result back to host.
-    queue.enqueueReadBuffer(SIM_POINTS_OUTPUT, CL_TRUE, 0, sim_points_output.size() * sizeof(SimPoint), sim_points_output.data());
-
-    // print result
-    std::cout << sim_points_output.size() << std::endl;
-    for (size_t i = 0; i < sim_points_output.size(); i++)
-    {
-        /* code */
-        std::cout << sim_points_output[i].position[0] << " -- " << sim_points_output[i].position[1] << " -- " << sim_points_output[i].position[2] << std::endl;
-    }
 
     // window stuff
     glfwInit();
@@ -207,8 +203,26 @@ int main()
     ImGui_ImplGlfw_InitForOpenGL(win, true);
     const char *glsl_version = "#version 330";
     ImGui_ImplOpenGL3_Init(glsl_version);
+    static bool sim_started = false;
     while (!glfwWindowShouldClose(win))
     {
+        if (sim_started)
+            sim_points = sim_points_output;
+        sim_started = true;
+        cl::Buffer SIM_POINTS(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+                              sim_points.size() * sizeof(SimPoint), sim_points.data());
+        cl::Buffer SIM_POINTS_OUTPUT(context, CL_MEM_READ_WRITE,
+                                     sim_points_output.size() * sizeof(SimPoint));
+        simulation.setArg(0, static_cast<cl_ulong>(NUM_POINTS));
+        simulation.setArg(1, SIM_POINTS);
+        simulation.setArg(2, SIM_POINTS_OUTPUT);
+
+        // Launch kernel on the compute device.
+        int offset = 0;
+        queue.enqueueNDRangeKernel(simulation, offset, NUM_POINTS);
+
+        // Get result back to host.
+        queue.enqueueReadBuffer(SIM_POINTS_OUTPUT, CL_TRUE, 0, sim_points_output.size() * sizeof(SimPoint), sim_points_output.data());
 
         int width, height;
         glfwGetFramebufferSize(win, &width, &height);
@@ -228,6 +242,8 @@ int main()
         glEnd();
         BeginImGuiFrame();
         ImGui::Begin("hello");
+
+        ImGui::Text("%d particles", sim_points_output.size());
         ImGui::End();
 
         EndImGuiFrame();
