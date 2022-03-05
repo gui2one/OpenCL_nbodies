@@ -14,6 +14,7 @@
 
 const char *sim_kernel_path = "C:/gui2one/CODE/OpenCL_nbodies/cl_kernels/simulation.ocl";
 
+// this strct must be repeated exacly inside kernel source code.
 typedef struct SimPoint_struct
 {
     float position[3];
@@ -22,7 +23,7 @@ typedef struct SimPoint_struct
     bool collided = false;
 } SimPoint;
 
-void BeginFrame()
+void BeginImGuiFrame()
 {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
@@ -31,7 +32,7 @@ void BeginFrame()
     ImGui::DockSpaceOverViewport(NULL, ImGuiDockNodeFlags_None | ImGuiDockNodeFlags_PassthruCentralNode /*|ImGuiDockNodeFlags_NoResize*/);
 }
 
-void EndFrame()
+void EndImGuiFrame()
 {
 
     ImGui::Render();
@@ -144,7 +145,7 @@ int main()
     PrintDevicesList(devices_list);
 
     std::string sim_kernel_source;
-    LoadKernelSource("C:/gui2one/CODE/OpenCL_nbodies/cl_kernels/simulation.ocl", sim_kernel_source);
+    LoadKernelSource(sim_kernel_path, sim_kernel_source);
     PrintKernalSource(sim_kernel_source);
 
     // choose a device
@@ -160,28 +161,34 @@ int main()
 
     cl::Kernel simulation(sim_program, "simulation");
     // Prepare input data.
-    size_t NUM_POINTS = 10;
-    std::vector<SimPoint> sim_points(NUM_POINTS, {1.0f, 2.0f, 3.14f, 1.0f, 1.0f, false});
+    size_t NUM_POINTS = 2;
+    std::vector<SimPoint> sim_points(NUM_POINTS, {0.0f, 0.0f, 0.0f, 1.0f, 1.0f, false});
     std::vector<SimPoint> sim_points_output(NUM_POINTS);
 
     cl::Buffer SIM_POINTS(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-                          sim_points.size() * sizeof(cl_float3), sim_points.data());
+                          sim_points.size() * sizeof(SimPoint), sim_points.data());
     cl::Buffer SIM_POINTS_OUTPUT(context, CL_MEM_READ_WRITE,
-                                 sim_points_output.size() * sizeof(cl_float3));
+                                 sim_points_output.size() * sizeof(SimPoint));
     simulation.setArg(0, static_cast<cl_ulong>(NUM_POINTS));
     simulation.setArg(1, SIM_POINTS);
     simulation.setArg(2, SIM_POINTS_OUTPUT);
-    int offset = 0;
+
     // Launch kernel on the compute device.
+    int offset = 0;
     queue.enqueueNDRangeKernel(simulation, offset, NUM_POINTS);
 
     // Get result back to host.
-    queue.enqueueReadBuffer(SIM_POINTS_OUTPUT, CL_TRUE, 0, sim_points_output.size() * sizeof(double), sim_points_output.data());
+    queue.enqueueReadBuffer(SIM_POINTS_OUTPUT, CL_TRUE, 0, sim_points_output.size() * sizeof(SimPoint), sim_points_output.data());
 
-    // Should get '3' here.
+    // print result
     std::cout << sim_points_output.size() << std::endl;
-    std::cout << sim_points_output[0].position[0] << " -- " << sim_points_output[0].position[1] << " -- " << sim_points_output[0].position[2] << std::endl;
+    for (size_t i = 0; i < sim_points_output.size(); i++)
+    {
+        /* code */
+        std::cout << sim_points_output[i].position[0] << " -- " << sim_points_output[i].position[1] << " -- " << sim_points_output[i].position[2] << std::endl;
+    }
 
+    // window stuff
     glfwInit();
     GLFWwindow *win = glfwCreateWindow(500, 500, "OpenCL Baby !!!", NULL, NULL);
 
@@ -209,11 +216,21 @@ int main()
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glClearColor(0.5f, 0.0f, 0.0f, 1.0f);
 
-        BeginFrame();
+        glPointSize(3.0f);
+        glBegin(GL_POINTS);
+
+        for (size_t i = 0; i < sim_points_output.size(); i++)
+        {
+            auto position = sim_points_output[i].position;
+            glVertex3f(position[0], position[1], position[2]);
+        }
+
+        glEnd();
+        BeginImGuiFrame();
         ImGui::Begin("hello");
         ImGui::End();
 
-        EndFrame();
+        EndImGuiFrame();
         glfwSwapBuffers(win);
         glfwPollEvents();
     }
