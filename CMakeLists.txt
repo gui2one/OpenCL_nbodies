@@ -4,6 +4,8 @@ project(OpenCL_test)
 
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-ignored-attributes")
+
+file(GLOB_RECURSE src_files RELATIVE "${CMAKE_CURRENT_SRC_DIR}", "src/*.cpp")
 link_directories(
     "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.0/lib/x64/"
     vendor/
@@ -19,9 +21,9 @@ include_directories(
     C:/msys64/mingw64/include
 )
 add_executable(app
-    
-    src/main.cpp
-    src/RNDGenerator.cpp
+    ${src_files}
+    # src/main.cpp
+    # src/RNDGenerator.cpp
 )
 
 # GLAD

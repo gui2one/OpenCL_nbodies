@@ -1,49 +1,70 @@
+#define PI 3.14159265359f
+
 typedef struct __attribute__((packed)) SimPoint_struct {
   ulong id;
   float position[3];
   float velocity[3];
   float mass;
+  float density;
   float radius;
   bool collided;
 } SimPoint;
 
+float ComputeRadius(SimPoint *point) {
+  float volume = point->mass / point->density;
+  float radius = cbrt((3.0f * volume) / (4.0f * PI));
+
+  return radius;
+}
+
 kernel void simulation(ulong n, global const SimPoint *sim_points,
-                       global SimPoint *output) {
+                       global SimPoint *output, const float step_size) {
 
   size_t i = get_global_id(0);
   if (i < n) {
 
     output[i] = sim_points[i];
-    float3 pos = {sim_points[i].position[0], sim_points[i].position[1],
-                  sim_points[i].position[2]};
-    float3 vel = {sim_points[i].velocity[0], sim_points[i].velocity[1],
-                  sim_points[i].velocity[2]};
+    float3 pos = {output[i].position[0], output[i].position[1],
+                  output[i].position[2]};
+    float3 vel = {output[i].velocity[0], output[i].velocity[1],
+                  output[i].velocity[2]};
 
-    // float3 accel = {0.0f, 0.0f, 0.0f};
-    // for (ulong other_idx = 0; other_idx < n; other_idx++) {
+    float3 accel = {0.0f, 0.0f, 0.0f};
+    for (ulong other_idx = 0; other_idx < n; other_idx++) {
 
-    //   ulong other_id = sim_points[other_idx].id;
-    //   if (output[i].id != other_id) {
+      ulong other_id = sim_points[other_idx].id;
+      if (output[i].id != other_id) {
 
-    //     float3 other_pos = {sim_points[other_idx].position[0],
-    //                         sim_points[other_idx].position[1],
-    //                         sim_points[other_idx].position[2]};
-    //     float other_mass = sim_points[other_idx].mass;
+        float3 other_pos = {sim_points[other_idx].position[0],
+                            sim_points[other_idx].position[1],
+                            sim_points[other_idx].position[2]};
+        float other_mass = sim_points[other_idx].mass;
 
-    //     float3 dir = other_pos - pos;
-    //     float dist = length(dir);
-    //     float3 temp = normalize(dir) * (1.0f / (dist * dist)) * (other_mass);
-    //     accel += temp * 0.1f;
-    //   }
-    // }
+        float3 dir = other_pos - pos;
+        float dist = length(dir);
+        float radius = output[i].radius;
+        float other_radius = output[other_idx].radius;
+        if (dist < radius + other_radius) {
+          if (output[i].mass < other_mass) {
 
-    // vel += accel;
+            output[i].collided = true;
+          }
+        }
+        float3 temp = normalize(dir) * (1.0f / (dist * dist)) * (other_mass);
+        accel += temp * 0.01f * step_size;
+      }
+    }
+
+    vel += accel;
     pos += vel;
 
     //// output result
     output[i].position[0] = pos.x;
     output[i].position[1] = pos.y;
     output[i].position[2] = pos.z;
-    // output[i].position[0] += 0.01;
+
+    output[i].velocity[0] = vel.x;
+    output[i].velocity[1] = vel.y;
+    output[i].velocity[2] = vel.z;
   }
 }
