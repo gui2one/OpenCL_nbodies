@@ -135,20 +135,21 @@ cl::Program BuildProgram(cl::Context context, std::string prog_source, std::vect
 std::vector<SimPoint> InitSimPoints(uint32_t num_pts)
 {
     std::vector<SimPoint> pts;
-    for (size_t i = 0; i < num_pts; i++)
+    for (unsigned long i = 0; i < num_pts; i++)
     {
         auto rng = RNDGenerator::GetInstance();
         SimPoint pt;
+        pt.id = i;
         pt.position[0] = rng->Float(-1.f, 1.f);
         pt.position[1] = rng->Float(-1.f, 1.f);
         pt.position[2] = rng->Float(-1.f, 1.f);
 
         pt.velocity[0] = rng->Float(-1.f, 1.f) * 0.01f;
-        pt.velocity[1] = 0.0f;
+        pt.velocity[1] = rng->Float(-1.f, 1.f) * 0.01f;
         pt.velocity[2] = 0.0f;
 
-        pt.mass = 1.0f;
-        pt.radius = 1.0f;
+        pt.mass = 0.01f;
+        pt.radius = 0.001f;
 
         pts.push_back(pt);
     }
@@ -179,7 +180,7 @@ int main()
 
     cl::Kernel simulation(sim_program, "simulation");
     // Prepare input data.
-    size_t NUM_POINTS = 100000;
+    size_t NUM_POINTS = 20;
     // std::vector<SimPoint> sim_points(NUM_POINTS, {0.0f, 0.0f, 0.0f, 1.0f, 1.0f, false});
     std::vector<SimPoint> sim_points = InitSimPoints(NUM_POINTS);
     std::vector<SimPoint> sim_points_output(NUM_POINTS);
